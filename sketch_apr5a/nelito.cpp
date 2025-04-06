@@ -6,8 +6,8 @@
 #include "hardware/timer.h"
 #include "pio_encoder.h"
 #include <atomic>
-#define EN1A 9   //Enable motor esquerdo A
-#define EN1B 1   //Enable motor esquerdo B
+#define EN1A 1   //Enable motor esquerdo A
+#define EN1B 9   //Enable motor esquerdo B
 #define EN2A 15    //Enable motor direito A
 #define EN2B 14    //Enable motor direito B
 uint16_t ENCODER_SAMPLE_RATE = 25000; //micro segundos / tempo de cada sample dos encoders na pio / default: 25000
