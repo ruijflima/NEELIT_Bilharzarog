@@ -97,18 +97,28 @@ void PID(){
 //! Leitura da linha
 //# 1 = Branco
 //# 0 = Preto
-void readLineSensor(
-
-){
+void readLineSensor(){
   sensor1_black = 1.0 - (double)digitalRead(LINE_SENSOR_1_PIN);
   sensor2_black = 1.0 - (double)digitalRead(LINE_SENSOR_2_PIN);
   sensor3_black = 1.0 - (double)digitalRead(LINE_SENSOR_3_PIN);
   sensor4_black = 1.0 - (double)digitalRead(LINE_SENSOR_4_PIN);
   sensor5_black = 1.0 - (double)digitalRead(LINE_SENSOR_5_PIN);
+  int sensor_code = sensor1_black * 10000
+                  + sensor2_black * 1000
+                  + sensor3_black * 100
+                  + sensor4_black * 10
+                  + sensor5_black;
+
   num_blacks = sensor1_black + sensor2_black + sensor3_black + sensor4_black + sensor5_black;
 
   if(num_blacks == 0 || num_blacks == 5){
     lost = true;
+  }
+  else if(sensor_code >= 10100 && sensor_code <= 10111){
+    lineSensorError = 12.0;
+  }
+  else if(sensor_code == 101 || sensor_code == 1101 || sensor_code == 11101){
+    lineSensorError = - 12.0;
   }
   else{
     lost = false;
