@@ -28,8 +28,10 @@
 #define MAX_LIN_ACCEL 12500
 #define MAX_ANG_ACCEL 100
 
-#define EXTREME_LINE_ERROR 18.0
-#define SMALL_LINE_ERROR 2.0
+#define EXTREME_RIGHT - 18.0
+#define EXTREME_LEFT 18.0
+#define SMALL_RIGHT - 2.0
+#define SMALL_LEFT 2.0
 
 // Control variables
 unsigned long lastTime = 0;
@@ -43,16 +45,23 @@ double sensor1_black, sensor2_black, sensor3_black, sensor4_black, sensor5_black
 double lineSensorError = 0.0;
 double last_lineSensorError = 0.0;
 double accum_lineSensorError = 0.0;
-bool lost = false;
+bool control_with_PID = false;
 
 double robot_v = 0, robot_w = 0;
 double last_robot_v = 0, last_robot_w = 0;
 double Kp = 15000.0;
 double Kd = 0.0;
 double Ki = 0.0;
+double speed_of_time = 1.0; // brita em v e w
+double brita_index = 1.0;  // brita em v
+
+bool shortcut = false;
 
 //! Controlo de velocidade
 void convert_velocity_to_speed(){
+
+  //robot_v = robot_v * speed_of_time * brita_index;
+  //robot_w = robot_w * speed_of_time;
   leftMotorSpeed = robot_v - robot_w*WHEEL_DISTANCE/2;
   rightMotorSpeed = robot_v + robot_w*WHEEL_DISTANCE/2;
 }
@@ -87,7 +96,7 @@ void PID(){
   last_robot_v = robot_v;
   last_robot_w = robot_w;
 
-  robot_v = MAX_LIN_VEL * (1.0 - 2.5* abs(lineSensorError) / EXTREME_LINE_ERROR);
+  robot_v = MAX_LIN_VEL * (1.0 - 2.5 * abs(lineSensorError) / EXTREME_LEFT);
   robot_w = Kp * lineSensorError;  
 }
 
@@ -103,20 +112,34 @@ void readLineSensor(
   sensor3_black = 1.0 - (double)digitalRead(LINE_SENSOR_3_PIN);
   sensor4_black = 1.0 - (double)digitalRead(LINE_SENSOR_4_PIN);
   sensor5_black = 1.0 - (double)digitalRead(LINE_SENSOR_5_PIN);
+  int sensor_code = sensor1_black * 10000 + sensor2_black * 1000 + sensor3_black * 100 + sensor4_black * 10 + sensor5_black;
   num_blacks = sensor1_black + sensor2_black + sensor3_black + sensor4_black + sensor5_black;
 
   if(num_blacks == 0 || num_blacks == 5){
-    lost = true;
+    control_with_PID = false;
+    brita_index = 1.0;
+  }
+  else if(sensor_code == 100){
+    control_with_PID = true;
+    brita_index = 1.0;
+    if(brita_index > 2.0){
+      brita_index = 2.0;
+    }
   }
   else{
-    lost = false;
-    lineSensorError = sensor1_black * EXTREME_LINE_ERROR
-                    + sensor2_black * SMALL_LINE_ERROR
-                    - sensor4_black * SMALL_LINE_ERROR
-                    - sensor5_black * EXTREME_LINE_ERROR;
+    control_with_PID = true;
+    lineSensorError = sensor1_black * EXTREME_LEFT
+                    + sensor2_black * SMALL_LEFT
+                    + sensor4_black * SMALL_RIGHT
+                    + sensor5_black * EXTREME_RIGHT;
 
     lineSensorError = lineSensorError / num_blacks;
+    brita_index = 1.0;
   }
+}
+
+void corta_mato(){
+  robot_v = ;
 }
 
 void setup() {
@@ -127,6 +150,7 @@ void setup() {
   pinMode(LINE_SENSOR_3_PIN, INPUT);
   pinMode(LINE_SENSOR_4_PIN, INPUT);
   pinMode(LINE_SENSOR_5_PIN, INPUT);
+  pinMode(IR_RECEIVER_PIN, INPUT);
   pinMode(LINE_SENSOR_PWM_PIN, OUTPUT);
 
   // Init Encoders
@@ -147,12 +171,28 @@ void loop() {
   if(currentTime - lastTime > CONTROL_PERIOD) {
     lastTime = currentTime;
 
+    if(!digitalRead(IR_RECEIVER_PIN)){
+      shortcut = false;
+    }
+    else{
+      shortcut = true;
+    }
+
     //! READ INPUTS
     // left_motor_channelA = digitalRead(LEFT_MOTOR_ENC_PIN_A);
     // right_motor_channelA = digitalRead(RIGHT_MOTOR_ENC_PIN_A);
-    readLineSensor();
-    //! PROCESSING
-    PID();
+    if(shortcut){
+      corta_mato();
+    }
+
+    if(!shortcut){
+      readLineSensor();
+      //! PROCESSING
+      if(control_with_PID){
+        PID();
+      }
+    }
+
     //limitAcceleration()
 
     convert_velocity_to_speed();
@@ -161,6 +201,11 @@ void loop() {
     Serial.println(leftMotorSpeed);
     Serial.print("Right Motor: ");
     Serial.println(rightMotorSpeed);
+    Serial.print("Linear: ");
+    Serial.println(robot_v);
+    Serial.print("Angular: ");
+    Serial.println(robot_w);
+
 
 
     //! OUTPUT
