@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "nelito.h"
 
-#define CONTROL_PERIOD 1000 //ms
+#define CONTROL_PERIOD 1 //ms
 #define LOW 0 //GND
 #define HIGH 3.3 //VCC
 
@@ -23,12 +23,12 @@
 #define BTN_PIN 22
 
 #define WHEEL_DISTANCE 0.15 //m
-#define MAX_LIN_VEL 12500
+#define MAX_LIN_VEL 8000
 #define MAX__ANG_VEL 100000
 #define MAX_LIN_ACCEL 12500
 #define MAX_ANG_ACCEL 100
 
-#define EXTREME_LINE_ERROR 5.0
+#define EXTREME_LINE_ERROR 18.0
 #define SMALL_LINE_ERROR 2.0
 
 // Control variables
@@ -47,7 +47,7 @@ bool lost = false;
 
 double robot_v = 0, robot_w = 0;
 double last_robot_v = 0, last_robot_w = 0;
-double Kp = 20000.0;
+double Kp = 15000.0;
 double Kd = 0.0;
 double Ki = 0.0;
 
@@ -87,7 +87,7 @@ void PID(){
   last_robot_v = robot_v;
   last_robot_w = robot_w;
 
-  robot_v = MAX_LIN_VEL * (1.0 - abs(lineSensorError) / EXTREME_LINE_ERROR);
+  robot_v = MAX_LIN_VEL * (1.0 - 2.5* abs(lineSensorError) / EXTREME_LINE_ERROR);
   robot_w = Kp * lineSensorError;  
 }
 
@@ -95,7 +95,9 @@ void PID(){
 //! Leitura da linha
 //# 1 = Branco
 //# 0 = Preto
-void readLineSensor(){
+void readLineSensor(
+
+){
   sensor1_black = 1.0 - (double)digitalRead(LINE_SENSOR_1_PIN);
   sensor2_black = 1.0 - (double)digitalRead(LINE_SENSOR_2_PIN);
   sensor3_black = 1.0 - (double)digitalRead(LINE_SENSOR_3_PIN);
@@ -103,17 +105,16 @@ void readLineSensor(){
   sensor5_black = 1.0 - (double)digitalRead(LINE_SENSOR_5_PIN);
   num_blacks = sensor1_black + sensor2_black + sensor3_black + sensor4_black + sensor5_black;
 
-  lineSensorError = sensor1_black * EXTREME_LINE_ERROR
+  if(num_blacks == 0 || num_blacks == 5){
+    lost = true;
+  }
+  else{
+    lost = false;
+    lineSensorError = sensor1_black * EXTREME_LINE_ERROR
                     + sensor2_black * SMALL_LINE_ERROR
                     - sensor4_black * SMALL_LINE_ERROR
                     - sensor5_black * EXTREME_LINE_ERROR;
 
-  if(num_blacks == 0){
-    lost = true;
-
-  }
-  else{
-    lost = false;
     lineSensorError = lineSensorError / num_blacks;
   }
 }
@@ -137,10 +138,6 @@ void setup() {
 
   // Init motor control
   motor_init();
-
-  Serial.println("Press button to begin!");
-  while(digitalRead(BTN_PIN) == LOW){}++
-
 
 }
 
