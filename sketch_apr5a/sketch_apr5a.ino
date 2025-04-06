@@ -51,6 +51,8 @@ double Kp = 15000.0;
 double Kd = 0.0;
 double Ki = 0.0;
 
+int state = 0;
+
 //! Controlo de velocidade
 void convert_velocity_to_speed(){
   leftMotorSpeed = robot_v - robot_w*WHEEL_DISTANCE/2;
@@ -128,6 +130,7 @@ void setup() {
   pinMode(LINE_SENSOR_4_PIN, INPUT);
   pinMode(LINE_SENSOR_5_PIN, INPUT);
   pinMode(LINE_SENSOR_PWM_PIN, OUTPUT);
+  pinMode(IR_RECEIVER_PIN, INPUT);
 
   // Init Encoders
   bool init_encoder_flag = encoder_init(LEFT_MOTOR_ENC_PIN_A, RIGHT_MOTOR_ENC_PIN_A);
@@ -152,7 +155,29 @@ void loop() {
     // right_motor_channelA = digitalRead(RIGHT_MOTOR_ENC_PIN_A);
     readLineSensor();
     //! PROCESSING
-    PID();
+    if(state == 0){
+      PID();
+      Serial.println("State 0");
+      if(digitalRead(IR_RECEIVER_PIN) == LOW){
+        state = 1;
+      }
+    }
+    else if(state == 1){
+      robot_v = 7000;
+      robot_w = 20000;
+      Serial.println("State 1");
+      if(sensor3_black != 1.0){
+        state = 2;
+      }
+    }
+    else if(state == 2){
+      Serial.println("State 2");
+      if(sensor1_black == 1.0 || sensor2_black == 1.0 || sensor3_black == 1.0){
+        state = 0;
+      }
+      robot_v = 7000;
+      robot_w = 20000;
+    }
     //limitAcceleration()
 
     convert_velocity_to_speed();
