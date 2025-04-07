@@ -50,11 +50,14 @@ double last_robot_v = 0, last_robot_w = 0;
 double Kp = 15000.0;
 double Kd = 0.0;
 double Ki = 0.0;
+double speed_of_time = 1.25;
 
 int state = 0;
 
 //! Controlo de velocidade
 void convert_velocity_to_speed(){
+  robot_v *= speed_of_time;
+  robot_w *= speed_of_time;
   leftMotorSpeed = robot_v - robot_w*WHEEL_DISTANCE/2;
   rightMotorSpeed = robot_v + robot_w*WHEEL_DISTANCE/2;
 }
@@ -115,10 +118,10 @@ void readLineSensor(){
     lost = true;
   }
   else if(sensor_code >= 10100 && sensor_code <= 10111){
-    lineSensorError = 12.0;
+    lineSensorError = 10.5;
   }
   else if(sensor_code == 101 || sensor_code == 1101 || sensor_code == 11101){
-    lineSensorError = - 12.0;
+    lineSensorError = - 10.5;
   }
   else{
     lost = false;
